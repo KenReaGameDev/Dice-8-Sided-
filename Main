@@ -1,0 +1,199 @@
+/********************************************************************************
+/	Author: Ken Rea				File: Main										/
+/	Engine: Unity C#															/
+/ 	Date : 10/22/2015															/
+/ 	Game: Dice on a Yacht														/
+********************************************************************************/
+
+using UnityEngine;
+using System.Collections;
+using UnityEngine.UI;
+
+public class Main : MonoBehaviour {
+
+	///<summary>
+	/// Categories Dice Rolls are sorted into for scoring.
+	///</summary> 
+	public enum Category {Ones = 1, Twos, Threes, Fours, 
+							Fives, Sixes, Sevens, Eights, 
+							ThreeOfAKind, FourOfAKind, FullHouse, 
+							SmallStraight, LargeStraight, 
+							AllDifferent, Chance, AllSame};
+	
+	Category currentCategory;
+	public Text infoCategory;
+	public Text infoScore;
+	
+	public int[] Dice = new int[5];
+	
+	public int minRoll = 0;
+	public int maxRoll = 8;
+	public int simulationIterations = 1;
+	public int currentIterationCound;
+	
+	ScoreGenerator Score;
+	SuggestionGenerator Suggestion;
+	DieRoller Roller;
+	// Use this for initialization
+	void Start () {
+		Suggestion = new SuggestionGenerator();
+		Roller = GetComponent<DieRoller>();
+		Score = new ScoreGenerator();
+	}
+	
+	// Update is called once per frame
+	void Update () {
+	
+		if (Input.GetKeyDown(KeyCode.Escape))
+			Application.Quit();
+			
+		if (Input.GetKeyDown(KeyCode.R))
+			StartCoroutine(PlayRound());
+		
+		// Custom Debugging Tests.
+		if (Input.GetKeyDown(KeyCode.Space))
+			CustomRound();
+			
+		if (Input.GetKeyDown(KeyCode.Q))
+			StartCoroutine(SimulateRounds());
+			
+		if (Input.GetKeyDown(KeyCode.Alpha0))
+			StraightRound();
+			
+		if (Input.GetKeyDown(KeyCode.Alpha1))
+			RepeatStraightRound();
+			
+		if (Input.GetKeyDown(KeyCode.Alpha2))
+			ChanceRound();
+			
+		if (Input.GetKeyDown(KeyCode.Alpha3))
+			FullHouseRound();
+			
+		if (Input.GetKeyDown(KeyCode.Alpha4))
+			PairRound();
+			
+		if (Input.GetKeyDown(KeyCode.Alpha5))
+			FourKindRound();
+			
+		if (Input.GetKeyDown(KeyCode.Alpha6))
+			AllKindRound();
+			
+		if (Input.GetKeyDown(KeyCode.Alpha7))
+			ThreeKindRound();
+	}
+	
+	void DebugInfo()
+	{
+		currentCategory = Suggestion.GetSuggestion(Dice);
+		Roller.SetDice(Dice);
+		infoCategory.text = currentCategory.ToString();
+		infoScore.text = Score.GetScore(currentCategory, Suggestion.diceSum).ToString();
+	}
+	
+	// Debug Testing Code - Plays a Five of a Kind (All Same) Round.
+	void AllKindRound()
+	{
+		Dice = new int[5] {1,1,1,1,1};
+		DebugInfo();
+	}
+	
+	// Debug Testing Code - Plays a Three of a Kind Round.
+	void ThreeKindRound()
+	{
+		Dice = new int[5] {4,4,4,7,5};
+		DebugInfo();
+	}
+	
+	// Debug Testing Code - Plays a Four of a Kind Round
+	void FourKindRound()
+	{
+		Dice = new int[5] {1,1,1,1,5};
+		DebugInfo();
+	}
+	
+	// Debug Testing Code - Plays a Chance
+	void ChanceRound()
+	{
+		Dice = new int[5] {1,1,2,2,5};
+		DebugInfo();
+	}
+	
+	// Debug Testing Code - Plays a Large Straight Round
+	void StraightRound()
+	{
+		Dice = new int[5] {2,1,3,4,5};
+		DebugInfo();
+	}
+	
+	// Debug Testing Code - Plays a Straight + Repeat Round
+	void RepeatStraightRound()
+	{
+		Dice = new int[5] {1,2,3,4,4};
+		DebugInfo();
+	}
+	
+	// Debug Testing Code - Plays a Full House Round
+	void FullHouseRound()
+	{
+		Dice = new int[5] {1,1,1,2,2};
+		DebugInfo();
+	}
+	
+	void PairRound()
+	{
+		Dice = new int[5] {5,6,7,8,8};
+		DebugInfo();
+	}
+	
+	// Simulates Multiple Rounds
+	IEnumerator SimulateRounds()
+	{
+		for (int i = 0; i < simulationIterations; i++)
+		{
+			currentIterationCound = i;
+			PlayRound();
+			yield return null;
+		}
+		
+		yield return null;
+	}
+	
+	// Plays the current round of Dice.
+	IEnumerator PlayRound()
+	{
+		Debug.Log("Roll");
+		RollDice();
+		currentCategory = Suggestion.GetSuggestion(Dice);
+		
+		yield return new WaitForSeconds(1.0f);
+		
+		Roller.rolling = false;		
+		yield return null;
+		Roller.SetDice(Dice);
+		infoCategory.text = currentCategory.ToString();
+		infoScore.text = Score.GetScore(currentCategory, Suggestion.diceSum).ToString();
+		Debug.Log(currentCategory.ToString());
+		
+		yield return null;
+	}
+	
+	// Plays a custom round of dice with set dice.
+	void CustomRound()
+	{
+		currentCategory = Suggestion.GetSuggestion(Dice);
+		Debug.Log(currentCategory.ToString());
+	}
+	
+	// Rolls the dice using Unity Engine Random to generate the dice.
+	void RollDice()
+	{
+		string ConsoleOut = "";
+		for (int i = 0; i < Dice.Length; i++)
+		{
+			Dice[i] = UnityEngine.Random.Range(minRoll, maxRoll);
+			ConsoleOut += "[" + Dice[i] + "] ";
+		}
+		Debug.Log(ConsoleOut);
+		Roller.Roll();
+	}
+}
