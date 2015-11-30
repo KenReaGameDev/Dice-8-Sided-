@@ -1,0 +1,60 @@
+/********************************************************************************
+/	Author: Ken Rea				File: Die Roller								/
+/	Engine: Unity C#															/
+/ 	Date : 10/22/2015															/
+/ 	Game: Dice on a Yacht														/
+********************************************************************************/
+
+using UnityEngine;
+using UnityEngine.UI;
+using System.Collections;
+
+public class DieRoller : MonoBehaviour {
+
+	public Image[] Dice;	
+	public Sprite[] Possiblities;
+	public float rollTime = 0.01f;
+	public bool rolling = false;
+	bool finishedRolling = false;
+	// Use this for initialization
+	void Start () {
+	
+	}
+	
+	// Update is called once per frame
+	void Update () {
+//		if (Input.GetKeyDown(KeyCode.F))
+//			Roll();
+	}
+	
+	public void Roll()
+	{
+		for (int i = 0; i < Dice.Length; i++)
+			StartCoroutine(RollRoutine(i));
+	}
+	
+	public void SetDice(int[] inResults)
+	{			
+		for (int i = 0; i < Dice.Length; i++)
+		{
+			Debug.Log(inResults[i]);	
+			Dice[i].sprite = Possiblities[(inResults[i] - 1)];
+		}
+	}
+	
+	IEnumerator RollRoutine(int dieNumber)
+	{
+		rolling = true;
+		finishedRolling = false;
+		while (rolling)
+		{
+			Dice[dieNumber].sprite = Possiblities[UnityEngine.Random.Range(0,7)];
+			yield return null;
+		}
+		
+		finishedRolling = true;
+		yield return null;
+	}
+	
+	
+}
