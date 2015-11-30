@@ -1,0 +1,60 @@
+/********************************************************************************
+/	Author: Ken Rea				File: Score Generator							/
+/	Engine: Unity C#															/
+/ 	Date : 10/22/2015															/
+/ 	Game: Dice on a Yacht														/
+********************************************************************************/
+
+using UnityEngine;
+using System.Collections;
+
+public class ScoreGenerator {
+
+	Main.Category Category;
+	
+	/// <summary>
+	/// Gets the score based on which category is been chosen.
+	/// </summary>
+	/// <returns>The Score</returns>
+	/// <param name="inCategory">In category.</param>
+	/// <param name="inSuggestion">In Dice Sum.</param>
+	public int GetScore(Main.Category inCategory, int diceSum)
+	{
+		int score = 0;		    	
+		// Cases sorted by the most likely to happen for efficienty.
+		switch(inCategory)
+		{		
+		
+		case Main.Category.Chance:
+			return diceSum;			
+
+		case Main.Category.AllDifferent:
+			return 40;
+			
+		case Main.Category.ThreeOfAKind:
+			return diceSum;
+		
+		case Main.Category.FullHouse:
+			return 25;
+			
+		case Main.Category.SmallStraight:
+			return 30;
+		
+		case Main.Category.LargeStraight:
+			return 40;
+			
+		case Main.Category.FourOfAKind:
+			return diceSum;	
+			
+		case Main.Category.AllSame:
+			return 50;			
+		}
+		
+		// Any Category less than 9 is a pair. 
+		if ((int)inCategory < 9)
+			return((int)inCategory * 2);
+			
+		return score;
+	}
+
+}
