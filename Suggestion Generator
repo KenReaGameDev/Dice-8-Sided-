@@ -1,0 +1,329 @@
+/********************************************************************************
+/	Author: Ken Rea				File: Suggestion Generator						/
+/	Engine: Unity C#															/
+/ 	Date : 10/22/2015															/
+/ 	Game: Dice on a Yacht														/
+********************************************************************************/
+
+using UnityEngine;
+using System.Collections;
+using System.Linq;
+
+public class SuggestionGenerator {
+
+	Main.Category Category;
+	
+	public bool hasRepeats {get; private set;}
+	public bool hasStraight {get; private set;}
+	public bool largeStraight {get; private set;}
+	public bool multiRepeat {get; private set;}
+	public bool significantRepeat {get; private set;}
+	public bool threeKind {get; private set;}
+	public bool twoKind {get; private set;}
+	public bool fourKind {get; private set;}
+	public bool fiveKind {get; private set;}
+	public bool fullHouse {get; private set;}
+	public bool chance {get; private set;}
+	public bool allDifferent {get; private set;}
+	
+	/// <summary>
+	/// The most repeats of a Kind this roll.
+	/// </summary>
+	public int maxKindRepeats {get; private set;}
+	
+	/// <summary>
+	/// How Many in a row straight.
+	/// </summary>
+	public int mostStraight {get; private set;}
+	
+	public int pairs {get; private set;}
+	public int pairValue {get; private set;}
+	public int repeatValue {get; private set;}
+	public int diceSum {get; private set;}
+	
+	int[] currentDiceRoll;
+	bool[] repeat;
+	
+	public SuggestionGenerator()
+	{
+		ResetSuggestion();
+	}
+	
+	/// <summary>
+	/// Checks variables and dice to determine which Category is best for this roll.
+	/// </summary>
+	/// <returns>The suggestion.</returns>
+	/// <param name="inDiceRoll">In dice roll.</param>
+	public Main.Category GetSuggestion(int[] inDiceRoll)
+	{
+		ResetSuggestion();		
+		currentDiceRoll = inDiceRoll;		
+		repeat = new bool[inDiceRoll.Length];
+		
+		// Set here becaues it's the only possible outcome that requires nothing else to happen.
+		Category = Main.Category.AllDifferent;
+		
+		SumOfDice();
+
+		// Checks if there are any repeats, then gets the tally
+		if (CheckRepeats())
+			RepeatCount();
+			
+		// If there is a repeat of card 3 or more times, a straight is impossible.
+		if (!significantRepeat)
+			CheckStraight();
+		
+		
+		return DecideCategory();
+	}
+	
+	/// <summary>
+	/// Gets the sum of the current Dice Roll (Using linq)
+	/// </summary>
+	void SumOfDice()
+	{
+		diceSum = currentDiceRoll.Sum();
+	}
+	
+	/// <summary>
+	/// Decides the category based on the information generated
+	/// </summary>
+	/// <returns>The category.</returns>
+	Main.Category DecideCategory()
+	{
+		
+		if (chance)
+			return Main.Category.Chance;
+		
+		if (fullHouse)
+			return Main.Category.FullHouse;
+			
+		if (hasStraight)
+			return Main.Category.SmallStraight;
+			
+		if (largeStraight)
+			return Main.Category.LargeStraight;
+		
+		if (significantRepeat)
+		{
+			if (threeKind)
+				return Main.Category.ThreeOfAKind;
+			if (fourKind)
+				return Main.Category.FourOfAKind;
+			if (fiveKind)
+				return Main.Category.AllSame;
+		
+		}
+		else
+		{
+			if (twoKind)
+				return (Main.Category)pairValue;
+		
+		}
+		
+		return Main.Category.AllDifferent;
+	}
+	
+	/// <summary>
+	/// Checks the first 2 positions of the dice to determine whether the next 3 or for 4 spaces are in Sequence.
+	/// </summary>
+	void CheckStraight()
+	{
+		int currentMostStraight = 1;
+		// Used for checking 
+		int previousValue;
+		
+		// Only have to check first two values, cant have straight with only 3 dice.
+		for (int i = 0; i < 2; ++i)
+		{
+			previousValue = currentDiceRoll[i];
+			currentMostStraight = 1;
+			
+			for (int n = i + 1; n < currentDiceRoll.Length; ++n)
+			{
+				if (currentDiceRoll[n] == (previousValue + 1))
+				{
+					currentMostStraight++;	
+					previousValue = currentDiceRoll[n];
+				}
+				else
+					break;
+			}
+			
+			mostStraight = (currentMostStraight > mostStraight) ? currentMostStraight : mostStraight;
+		}
+		
+		if (mostStraight > 3)
+			hasStraight = true;
+
+		if (mostStraight == 5)
+		{	
+			largeStraight = true;
+			Debug.Log("Large Straight");
+		}
+	}
+	
+	/// <summary>
+	/// Quickly Check for any repeat numbers.
+	//  No number checking against other numbers has to be checked twice
+	//  due to it already having checked against every number previously.
+	/// </summary>
+	/// <returns><c>true</c>, if repeats occured, <c>false</c> otherwise.</returns>
+	bool CheckRepeats()
+	{
+		for (int i = 0; i < currentDiceRoll.Length - 1; ++i)
+		{
+			for (int n = i + 1; n < currentDiceRoll.Length; ++n)
+			{
+				if (currentDiceRoll[i] == currentDiceRoll[n])
+				{
+					hasRepeats = true;
+					return true;
+				}
+			}
+		}
+		
+		hasRepeats = false;
+		allDifferent = true;
+		return false;
+	}
+	
+	/// <summary>
+	/// Determines how many repeats happen, what their value was, if they are pairs, triplets, etc.
+	/// Creates valuable scoring information through the information provided.
+	/// </summary>
+	void RepeatCount()
+	{
+		// How many repeats are in the roll 11223 is 2 repeats
+		int totalRepeats = 0;
+		
+		// How many repeats for a certain number 11133 - 1 has 3, 3 has 2.
+		int currentRepeats = 0;
+		int kindAmount = 0;
+		
+		bool checkMulti = false;		
+		
+		// Check each die against successive die.
+		for (int i = 0; i < currentDiceRoll.Length - 1; ++i)
+		{
+			currentRepeats = 0;
+			kindAmount = 1;
+			
+			// Skip any number already decided a repeat;
+			if (repeat[i])
+				continue;			
+			
+			for (int n = i + 1; n < currentDiceRoll.Length; ++n)
+			{
+				// Skip any number already decided a repeat;
+				if (repeat[n])
+					continue;
+					
+				if (currentDiceRoll[i] == currentDiceRoll[n])
+				{
+					// Sets if there is a multiple repeat.
+					if (currentRepeats == 0 && checkMulti)
+						multiRepeat = true;
+						
+					currentRepeats++;
+					kindAmount++;
+					
+					checkMulti = true;
+					repeat[i] = true;
+					repeat[n] = true;
+				}
+			}
+			
+			if (currentRepeats > 0)
+				totalRepeats++;
+				
+			
+			CheckKind(kindAmount, currentDiceRoll[i]);
+				
+			maxKindRepeats = (currentRepeats > maxKindRepeats) ? currentRepeats : maxKindRepeats;
+		}
+		
+		//Debug.Log("Most Repeats: " + maxKindRepeats);
+		
+		if (pairs > 1)
+		{
+			Debug.Log("Chance");
+			chance = true;
+		}
+		
+		if (threeKind && twoKind)
+		{	
+			fullHouse = true;
+			Debug.Log("Full House");
+		}
+	}
+	
+	/// <summary>
+	///	Check to see how many of a kind there are in this set.
+	/// </summary>
+	void CheckKind(int kindAmount, int inRoll)
+	{
+		// Set if we have kinds.
+		switch (kindAmount)
+		{
+		case 2:
+			pairs++;
+			pairValue = inRoll;
+			twoKind = true;
+			Debug.Log("2 Of A Kind");
+			break;
+			
+		case 3:
+			threeKind = true;
+			repeatValue = inRoll;
+			significantRepeat = true;
+			Debug.Log("3 Of A Kind");
+			break;
+			
+		case 4:
+			fourKind = true;
+			repeatValue = inRoll;
+			significantRepeat = true;
+			Debug.Log("4 Of A Kind");
+			break;
+			
+		case 5:
+			fiveKind = true;
+			repeatValue = inRoll;
+			significantRepeat = true;
+			Debug.Log("5 Of A Kind");
+			break;
+		}
+	}
+	
+	/// <summary>
+	/// Resets all variables related to scoring.
+	/// </summary>
+	public void ResetSuggestion()
+	{
+
+		maxKindRepeats = 0;
+		mostStraight = 0;
+		pairs = 0;
+		pairValue = 0;
+		repeatValue = 0;
+		diceSum = 0;
+		
+		hasRepeats = false;
+		hasStraight = false;
+		largeStraight = false;
+		multiRepeat = false;
+		significantRepeat = false;
+		threeKind = false;
+		twoKind = false;
+		fourKind = false;
+		fiveKind = false;
+		fullHouse = false;
+		chance = false;
+		allDifferent = false;
+		
+		repeat = new bool[1];
+	}
+	
+	
+}
